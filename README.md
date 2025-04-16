@@ -15,7 +15,6 @@ A framework for agents
 This library is intended for use with Deno and can be imported directly from JSR.
 
 ```typescript
-// Replace @xfth/relay with the actual JSR scope and package name after publishing
 import { Convo, GeminiModel } from "jsr:@xfth/relay@^0.1.0";
 ```
 
@@ -33,7 +32,7 @@ import { Convo, GeminiModel } from "jsr:@xfth/relay@^0.1.0";
 ### Basic Example
 
 ```typescript
-import { Convo, GeminiModel } from "jsr:@xfth/relay@^0.1.0"; // Adjust import path
+import { Convo, GeminiModel } from "jsr:@xfth/relay@^0.1.0";
 
 // This will automatically load the API key from .env
 const model = new GeminiModel();
@@ -41,8 +40,7 @@ const model = new GeminiModel();
 const c = new Convo("You are a helpful assistant.");
 c.user("What is the capital of France?");
 
-const response: string = await model.gen(c);
-c.model(response); // Add the model's response to the conversation history
+const response = c.model(await model.gen(c));
 
 console.log(response); // Output: Paris
 console.log(c.messages); // Shows the full conversation history
@@ -51,7 +49,7 @@ console.log(c.messages); // Shows the full conversation history
 ### JSON Output Example
 
 ```typescript
-import { Convo, GeminiModel } from "jsr:@username/tai@^0.1.0"; // Adjust import path
+import { Convo, GeminiModel } from "jsr:@xfth/relay@^0.1.0";
 
 const model = new GeminiModel();
 
@@ -72,7 +70,6 @@ const locationSchema = {
   required: ["city", "country"],
 };
 
-// Pass the schema to gen()
 const extractedData = c.model(
   await model.gen<Location>(c, locationSchema)
 );
@@ -93,9 +90,6 @@ console.log(extractedData); // Output: { city: "Berlin", country: "Germany" }
     *   `constructor(baseModel?: string)`: Optionally specify a Gemini model name (defaults to "gemini-1.5-flash").
     *   `gen<T>(convo: Convo, schema?: object)`: Generates a response. If `schema` is provided, attempts to return parsed JSON matching the schema (`T`), otherwise returns a string (`T`).
 
-## Contributing
-
-(Add contribution guidelines if desired)
 
 ## License
 

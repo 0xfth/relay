@@ -1,6 +1,6 @@
 {
   "name": "@xfth/relay",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "exports": "./mod.ts",
   "description": "TypeScript library for relaying conversations with AI models.",
   "repository": {
@@ -10,12 +10,12 @@
   "license": "CC0-1.0",
   "keywords": [
     "ai",
-        "gemini",
-        "llm",
-        "conversation",
-        "typescript",
-        "deno",
-        "relay"
+    "gemini",
+    "llm",
+    "conversation",
+    "typescript",
+    "deno",
+    "relay"
   ],
   "tasks": {
     "test-watch": "deno test --watch -A test-watch.ts",
