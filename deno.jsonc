@@ -1,0 +1,24 @@
+{
+  "name": "@xfth/relay",
+  "version": "0.1.0",
+  "exports": "./mod.ts",
+  "description": "TypeScript library for relaying conversations with AI models.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xfth/relay.git"
+  },
+  "license": "CC0-1.0",
+  "keywords": [
+    "ai",
+        "gemini",
+        "llm",
+        "conversation",
+        "typescript",
+        "deno",
+        "relay"
+  ],
+  "tasks": {
+    "test-watch": "deno test --watch -A test-watch.ts",
+    "test-full": "deno test -A test-full.ts test-full.ts" // Added test-full.ts here as it was missing
+  }
+}
