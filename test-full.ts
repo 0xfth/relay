@@ -1,6 +1,6 @@
 import { assert } from "jsr:@std/assert";
 import { Convo } from "./relay.ts";
-import { GeminiModel } from "./gemini.ts";
+import { GeminiModel } from "@/prefab/GeminiModel.ts";
 
 Deno.test("conversation with live api", async () => {
   const mm = new GeminiModel();

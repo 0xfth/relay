@@ -1,6 +1,6 @@
-import { Convo, Message, Model } from "./relay.ts";
 import { load } from "jsr:@std/dotenv@^0.225.3";
 import { GoogleGenAI } from "npm:@google/genai@^0.8.0";
+import { Convo, Message, Model } from "@/relay.ts";
 
 await load({ export: true, envPath: ".env" });
 const apiKey = Deno.env.get("GEMINI_API_KEY");

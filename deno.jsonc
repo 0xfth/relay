@@ -20,5 +20,8 @@
   "tasks": {
     "test-watch": "deno test --watch -A test-watch.ts",
     "test-full": "deno test -A test-full.ts test-full.ts" // Added test-full.ts here as it was missing
+  },
+  "imports": {
+    "@/": "./"
   }
 }
