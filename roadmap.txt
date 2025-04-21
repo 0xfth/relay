@@ -1,0 +1,183 @@
+
+
+## Phase 1: Establish Core Protocol & Connection Handling
+
+**Objective:** Get the absolute basic communication working: an external agent connects to a slot, interacts with a minimal component via a standard controller using a defined network protocol.
+
+**Key Areas:** Protocol Definition, Slot Networking, Controller Refactoring (Network), Basic Testing.
+
+**TODO:**
+
+*   **[ ] 1.1. Define Agent Communication Protocol v0.1 (CRITICAL):**
+    *   [ ] Choose technology: **WebSockets** (recommended for persistent sessions).
+    *   [ ] Define JSON message structures for Controller -> Agent communication:
+        *   `{ type: 'prompt', id: string, payload: { query: string } }` (for `get`)
+        *   `{ type: 'choice', id: string, payload: { query: string, options: Record<string, any> } }` (for `pick`)
+        *   `{ type: 'confirm', id: string, payload: { query: string } }` (for `confirm`)
+        *   `{ type: 'info', id: string, payload: { data: any } }` (for `put`)
+    *   [ ] Define JSON message structures for Agent -> Controller communication:
+        *   `{ type: 'response', id: string, payload: { content: string | object } }` (reply to `prompt`, `choice`, `confirm`)
+        *   `{ type: 'ack', id: string }` (acknowledgement for `info`)
+    *   [ ] Document this protocol clearly (e.g., `PROTOCOL.md`). Add request `id` for correlating responses.
+*   **[ ] 1.2. Refactor `WorkerController` for Networking:**
+    *   [ ] Make the existing `WorkerController` in `relay.ts` an **abstract class**.
+    *   [ ] **Remove** the `worker: Worker` (internal Agent/Model) dependency entirely from the abstract class and its methods.
+    *   [ ] Define abstract methods or properties needed for network communication (e.g., `abstract send(message: object): Promise<void>;`, potentially requiring a connection handle passed during instantiation).
+    *   [ ] Keep the internal `convo: Convo` management logic.
+*   **[ ] 1.3. Implement `StandardController` (Concrete Implementation):**
+    *   [ ] Create `StandardController extends WorkerController`.
+    *   [ ] Constructor should accept the network connection handle (e.g., WebSocket object).
+    *   [ ] Implement `get`, `pick`, `confirm`, `put`:
+        *   Update internal `convo`.
+        *   Generate unique request `id`.
+        *   Format the appropriate JSON message according to the defined protocol.
+        *   Send the message over the network connection.
+        *   **Crucially:** Implement logic to **wait for and receive** the corresponding response message (matching `id`) from the agent.
+        *   Handle potential timeouts or errors during receive.
+        *   Update internal `convo` with the agent's response.
+        *   Return the received data to the calling `Component`.
+*   **[ ] 1.4. Implement Basic `Slot` Functionality:**
+    *   [ ] Create a `Slot` class/interface.
+    *   [ ] Add a basic WebSocket server setup within the `Slot` (or a shared server manager).
+    *   [ ] Implement `listen()` or `run()`:
+        *   Start the WebSocket server.
+        *   On connection:
+            *   Instantiate `StandardController` with the new WebSocket connection.
+            *   Initialize the `StandardController`'s `Convo` (e.g., `new Convo("Slot system prompt")`).
+            *   Instantiate a simple root `Component` (e.g., `HelloWorldComponent`).
+            *   Call `component.interact(controller)`.
+            *   Handle connection closure/errors.
+*   **[ ] 1.5. Create Minimal `HelloWorldComponent`:**
+    *   [ ] Implement `Component` interface.
+    *   [ ] `interact(controller)` method:
+        *   Calls `await controller.put("Hello from Component!")`.
+        *   Calls `const name = await controller.get("What is your name?")`.
+        *   Calls `await controller.put(`Nice to meet you, ${name}!`)`.
+*   **[ ] 1.6. Create Mock External Agent (Test Client):**
+    *   [ ] Create a simple Deno script (`test-agent.ts`) that:
+        *   Connects to the `Slot`'s WebSocket endpoint.
+        *   Listens for messages.
+        *   Handles `info` messages (logs them).
+        *   Handles `prompt` messages (e.g., automatically responds with `{ type: 'response', id: receivedId, payload: { content: 'TestAgent' } }`).
+        *   Acknowledges `info` with `ack`.
+*   **[ ] 1.7. Basic Integration Test:**
+    *   [ ] Run the `Slot`.
+    *   [ ] Run the `test-agent.ts`.
+    *   [ ] Verify the interaction completes successfully.
+
+---
+
+## Phase 2: Implement Controller Policies & Full Component Interaction
+
+**Objective:** Introduce different controller behaviors (policies) and ensure components can use the full `get/pick/confirm/put` interface correctly over the network.
+
+**Key Areas:** Controller Implementations, Slot Configuration, Component Examples, Testing Enhancement.
+
+**TODO:**
+
+*   **[ ] 2.1. Implement Full Network Logic in `StandardController`:**
+    *   [ ] Ensure `pick`, `confirm`, `put` fully implement sending the request and waiting for the specific response type (`response` with content/boolean, `ack`).
+*   **[ ] 2.2. Implement `DebugController`:**
+    *   [ ] Create `DebugController extends StandardController` (or directly from abstract `WorkerController`).
+    *   [ ] Override methods (`get`, `pick`, `confirm`, `put`).
+    *   [ ] Before sending to agent: Log the outgoing request details.
+    *   [ ] After receiving from agent: Log the incoming response details.
+    *   [ ] Call `super.method(...)` or reimplement network logic.
+*   **[ ] 2.3. Implement `AutoConfirmController`:**
+    *   [ ] Create `AutoConfirmController extends StandardController` (or abstract).
+    *   [ ] Override `confirm(query: string): Promise<boolean>`:
+        *   Update internal `convo` (user query, model auto-response 'true').
+        *   Optionally log the auto-confirmation.
+        *   **Do not** send message to agent.
+        *   Return `true` immediately.
+    *   [ ] Other methods (`get`, `pick`, `put`) likely delegate to `StandardController` logic or abstract implementation.
+*   **[ ] 2.4. Enhance `Slot` Configuration & Controller Selection:**
+    *   [ ] Allow `Slot` definition to specify permissible `WorkerController` types.
+    *   [ ] Implement a mechanism for the connecting agent OR the slot configuration to choose the controller (e.g., query parameter `?controller=debug`, header, or slot default).
+    *   [ ] Instantiate the *selected* controller type on connection.
+*   **[ ] 2.5. Create More Complex Example `Component` (`SurveyComponent`):**
+    *   [ ] `interact(controller)`:
+        *   Uses `controller.get()` for open questions.
+        *   Uses `controller.pick()` for multiple-choice questions.
+        *   Uses `controller.confirm()` to verify crucial answers.
+        *   Uses `controller.put()` to provide feedback or summaries.
+*   **[ ] 2.6. Enhance Mock External Agent:**
+    *   [ ] Handle `choice` messages (e.g., always pick the first option).
+    *   [ ] Handle `confirm` messages (e.g., always respond `true`).
+*   **[ ] 2.7. Integration Tests for Different Controllers:**
+    *   [ ] Test `SurveyComponent` with `StandardController`.
+    *   [ ] Test `SurveyComponent` with `DebugController` (check logs).
+    *   [ ] Test `SurveyComponent` with `AutoConfirmController` (check confirmations are skipped).
+
+---
+
+## Phase 3: Slot Enhancements & Robustness
+
+**Objective:** Add features like access control, multi-agent handling, error management, and potentially slot discovery.
+
+**Key Areas:** Slot Lifecycle, Security, Error Handling, Scalability.
+
+**TODO:**
+
+*   **[ ] 3.1. Implement Slot Access Control (Example: Token Auth):**
+    *   [ ] Modify `Slot` connection handling to expect an auth token (e.g., in headers or initial message).
+    *   [ ] Add logic to validate the token before proceeding. Reject connection if invalid.
+*   **[ ] 3.2. Implement Slot Competence Test (Example):**
+    *   [ ] Allow `Slot` definition to specify a preliminary `Component` (`ValidationComponent`).
+    *   [ ] After successful connection/auth, run `ValidationComponent` first using the chosen controller.
+    *   [ ] Only if `ValidationComponent` completes successfully (e.g., doesn't throw error, returns specific value), proceed to run the main root `Component`.
+*   **[ ] 3.3. Improve Network Error Handling:**
+    *   [ ] In `WorkerController` implementations: Handle WebSocket errors gracefully (disconnects, send failures).
+    *   [ ] Implement timeouts when waiting for agent responses.
+    *   [ ] Define how errors are propagated back to the calling `Component` (e.g., throw specific error types).
+*   **[ ] 3.4. Handle Component Errors:**
+    *   [ ] In `Slot`: Catch errors thrown by `Component.interact()`.
+    *   [ ] Log errors appropriately.
+    *   [ ] Ensure connection cleanup occurs on component error.
+*   **[ ] 3.5. Multiple Concurrent Connections:**
+    *   [ ] Ensure the `Slot` (or underlying server) correctly handles multiple agents connecting simultaneously.
+    *   [ ] Each connection must have its own independent `WorkerController` instance and `Convo`.
+*   **[ ] 3.6. (Optional) Slot Registry/Discovery:**
+    *   [ ] Consider a central mechanism to register available slots and allow agents to query them.
+
+---
+
+## Phase 4: Documentation, Examples & Polish
+
+**Objective:** Create comprehensive documentation, real-world examples, and refine the library API for ease of use.
+
+**Key Areas:** Documentation, Developer Experience, API Design.
+
+**TODO:**
+
+*   **[ ] 4.1. Write Comprehensive Documentation:**
+    *   [ ] **Architecture Overview:** Explain Slots, Components, Controllers, External Agents, Protocol.
+    *   [ ] **Getting Started Guide:** How to define a Slot, create a Component, run the server.
+    *   [ ] **Agent Protocol Specification (`PROTOCOL.md`):** Detail the WebSocket/JSON protocol rigorously.
+    *   [ ] **Guide: Building Components:** Best practices, using controller methods.
+    *   [ ] **Guide: Implementing External Agents:** How to connect, handle messages, follow the protocol.
+    *   [ ] **Guide: Custom WorkerControllers:** How to create custom policies.
+    *   [ ] **API Reference:** Auto-generated or manually written reference for public classes/interfaces (`Slot`, `Component`, `WorkerController`, `Convo`).
+*   **[ ] 4.2. Create Advanced Example Project:**
+    *   [ ] Example: A simple text-based adventure game where the External Agent plays the character.
+    *   [ ] Example: A data processing pipeline where a Component fetches data and uses the agent (via controller) to summarize or classify it.
+*   **[ ] 4.3. Refine Public API:**
+    *   [ ] Review all exported classes, interfaces, methods for clarity, consistency, and usability.
+    *   [ ] Ensure good error messages.
+*   **[ ] 4.4. Add JSR Publishing Setup:**
+    *   [ ] Ensure `deno.jsonc` is configured correctly for publishing.
+    *   [ ] Add publishing steps to workflow/docs.
+
+---
+
+## Ongoing Tasks / Cleanup
+
+*   **[ ] 5.1. Code Cleanup & Refactoring:**
+    *   [ ] **Remove Obsolete Code:** Delete the internal `Worker` class (unless repurposed for testing) and related logic (`GeminiModel`, `MocModel` might move to `examples/` or `tests/`).
+    *   [ ] Ensure consistent naming conventions.
+    *   [ ] Add internal code comments where necessary.
+*   **[ ] 5.2. Testing Improvements:**
+    *   [ ] Increase test coverage, especially for edge cases and error conditions.
+    *   [ ] Refine mock agent capabilities.
+*   **[ ] 5.3. Dependency Management:**
+    *   [ ] Keep dependencies (like `@std`) up-to-date.
