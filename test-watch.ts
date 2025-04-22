@@ -189,11 +189,11 @@ Deno.test("Convo: basic conversation management", () => {
   assertEquals(c.messages.length, 4);
   assertEquals(c.messages[0].role, "user");
   assertEquals(c.messages[0].content, "Hello");
-  assertEquals(c.messages[0].mime, "plain/text");
+  assertEquals(c.messages[0].mime, "text/plain");
 
   assertEquals(c.messages[1].role, "model");
   assertEquals(c.messages[1].content, "Hi there!");
-  assertEquals(c.messages[1].mime, "plain/text");
+  assertEquals(c.messages[1].mime, "text/plain");
 
   assertEquals(c.messages[2].role, "user");
   assertEquals(c.messages[2].content, `{"query":"details","type":"request"}`);
@@ -212,8 +212,9 @@ Deno.test("Convo: conversation cloning", () => {
   c.model("First response");
 
   const c2 = c.clone();
-  c2.system = "Cloned System Prompt"; // Modify clone's system prompt
+  c2.system = "Cloned System Prompt";
   c2.user("Second message for clone");
+  console.log(c2);
 
   // Verify original convo is unchanged
   assertEquals(c.messages.length, 2);

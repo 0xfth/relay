@@ -6,14 +6,12 @@ export abstract class Model {
 
 export interface Component {
   name: string;
-  interact(w: Controller): Promise<void>;
+  interact(controller: Controller): Promise<void>;
 }
 
 /**
- * Abstract class defining the interface for mediating Component interactions
- * with an External Agent over a network. Concrete implementations handle the
- * specific protocol and network communication (e.g., WebSockets).
- * It manages the conversation history from the Component's perspective.
+ * Abstract interface for mediating Component interactions with an Agent.
+ * Manages conversation history.
  */
 export abstract class Controller {
   convo: Convo;
@@ -22,74 +20,72 @@ export abstract class Controller {
     this.convo = initialConvo ?? new Convo();
   }
 
-  // Concrete implementations will handle sending/receiving messages according to their protocol.
-
-  /** Get input from the agent, optionally matching a schema. */
   abstract get<T>(query: string, schema?: object): Promise<T | null>;
-
-  /** Ask the agent to pick one option from a map. Returns the *value* associated with the chosen key. */
   abstract pick<T>(
     query: string,
     options: Record<string, T>,
   ): Promise<T | null>;
-
-  /** Ask the agent for a boolean confirmation. */
   abstract confirm(query: string): Promise<boolean>;
-
-  /** Send information to the agent. Should resolve when the information is successfully sent/acknowledged. */
   abstract put<T>(data: T): Promise<void>;
 }
 
-// Slot definition needs rethinking for networked architecture.
-// This is just a placeholder. Phase 1.4 will implement a functional Slot.
 export interface SlotConfig {
   name: string;
-  port: number; // Port for the WebSocket server
-  // systemPrompt?: string; // Initial system prompt for the Convo
-  rootComponent: Component; // The entry point component
-  // allowedControllerPolicies?: string[]; // See Phase 2.4
-  // authMechanism?: any; // See Phase 3.1
-  // validationComponent?: Component; // See Phase 3.2
+  port: number;
+  rootComponent: Component;
+  // Future enhancements: auth, policies, validation component etc.
 }
 
 // --- Conversation Management ---
 export type Message = {
   role: string;
   mime: string;
-  content: string;
+  content: string; // Content is always stored as string (JSON stringified if object)
 };
+
 export class Convo {
   system: string;
   messages: Message[];
+
   constructor(sys?: string) {
     this.system = sys ?? "";
     this.messages = [];
   }
+
   user<T>(content: T): T {
     return this.message("user", content);
   }
+
   model<T>(content: T): T {
     return this.message("model", content);
   }
-  private message<T>(role: string, content: T): T {
-    if (typeof content == "string") {
-      this.messages.push({
-        role,
-        mime: "plain/text",
-        content: content as string,
-      });
+
+  // Adds a message to the history, converting content to string if necessary.
+  // Returns the original content for chaining.
+  message<T>(role: string, content: T): T {
+    let mime: string;
+    let contentStr: string;
+
+    if (typeof content === "string") {
+      mime = "text/plain";
+      contentStr = content;
     } else {
-      this.messages.push({
-        role,
-        mime: "application/json",
-        content: JSON.stringify(content),
-      });
+      mime = "application/json";
+      try {
+        contentStr = JSON.stringify(content);
+      } catch (e) {
+        console.warn("Failed to stringify message content:", e);
+        contentStr = "[Unserializable Content]";
+      }
     }
+
+    this.messages.push({ role, mime, content: contentStr });
     return content;
   }
+
   clone(): Convo {
-    const nc = new Convo();
-    nc.system = this.system;
+    const nc = new Convo(this.system);
+    // Shallow copy message objects, which is fine as they are immutable records
     nc.messages = this.messages.map((m) => ({ ...m }));
     return nc;
   }
