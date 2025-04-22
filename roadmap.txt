@@ -8,62 +8,66 @@
 
 **TODO:**
 
-*   **[ ] 1.1. Define Agent Communication Protocol v0.1 (CRITICAL):**
-    *   [ ] Choose technology: **WebSockets** (recommended for persistent sessions).
-    *   [ ] Define JSON message structures for Controller -> Agent communication:
+*   **[X] 1.1. Define Agent Communication Protocol v0.1 (CRITICAL):**
+    *   [X] Choose technology: **WebSockets** (recommended for persistent sessions).
+    *   [X] Define JSON message structures for Controller -> Agent communication:
         *   `{ type: 'prompt', id: string, payload: { query: string } }` (for `get`)
         *   `{ type: 'choice', id: string, payload: { query: string, options: Record<string, any> } }` (for `pick`)
         *   `{ type: 'confirm', id: string, payload: { query: string } }` (for `confirm`)
         *   `{ type: 'info', id: string, payload: { data: any } }` (for `put`)
-    *   [ ] Define JSON message structures for Agent -> Controller communication:
+    *   [X] Define JSON message structures for Agent -> Controller communication:
         *   `{ type: 'response', id: string, payload: { content: string | object } }` (reply to `prompt`, `choice`, `confirm`)
         *   `{ type: 'ack', id: string }` (acknowledgement for `info`)
-    *   [ ] Document this protocol clearly (e.g., `PROTOCOL.md`). Add request `id` for correlating responses.
-*   **[ ] 1.2. Refactor `WorkerController` for Networking:**
-    *   [ ] Make the existing `WorkerController` in `relay.ts` an **abstract class**.
-    *   [ ] **Remove** the `worker: Worker` (internal Agent/Model) dependency entirely from the abstract class and its methods.
-    *   [ ] Define abstract methods or properties needed for network communication (e.g., `abstract send(message: object): Promise<void>;`, potentially requiring a connection handle passed during instantiation).
-    *   [ ] Keep the internal `convo: Convo` management logic.
-*   **[ ] 1.3. Implement `StandardController` (Concrete Implementation):**
-    *   [ ] Create `StandardController extends WorkerController`.
-    *   [ ] Constructor should accept the network connection handle (e.g., WebSocket object).
-    *   [ ] Implement `get`, `pick`, `confirm`, `put`:
-        *   Update internal `convo`.
-        *   Generate unique request `id`.
-        *   Format the appropriate JSON message according to the defined protocol.
-        *   Send the message over the network connection.
-        *   **Crucially:** Implement logic to **wait for and receive** the corresponding response message (matching `id`) from the agent.
-        *   Handle potential timeouts or errors during receive.
-        *   Update internal `convo` with the agent's response.
-        *   Return the received data to the calling `Component`.
-*   **[ ] 1.4. Implement Basic `Slot` Functionality:**
-    *   [ ] Create a `Slot` class/interface.
-    *   [ ] Add a basic WebSocket server setup within the `Slot` (or a shared server manager).
-    *   [ ] Implement `listen()` or `run()`:
+    *   [X] Document this protocol clearly (e.g., `PROTOCOL.md`). Add request `id` for correlating responses.
+*   **[X] 1.2. Refactor `WorkerController` for Networking:**
+        *   [X] Make the existing `WorkerController` in `relay.ts` an **abstract class**. This abstract class defines the interface for mediating Component interactions with an External Agent over the network.
+        *   [X] **Remove** the `worker: Worker` (internal Agent/Model) dependency entirely from the abstract class and its methods. Its purpose shifts from controlling an internal worker to managing network communication with an external agent.
+        *   [X] Define abstract methods or properties needed for network communication (e.g., `abstract sendRequest(payload: object): Promise<object>;`, handling request/response logic internally, potentially requiring a connection handle passed during instantiation).
+        *   [X] Keep the internal `convo: Convo` management logic to track the interaction history from the Component's perspective.
+*   **[X] 1.3. Implement `StandardController` (Concrete Implementation):**
+        *   [X] Create `StandardController extends Controller`. This controller directly implements the network protocol for standard agent interaction.
+        *   [X] Constructor should accept the network connection handle (e.g., WebSocket object).
+        *   [X] Implement `get`, `pick`, `confirm`, `put`:
+            *   Update internal `convo` with the component's request.
+            *   Generate unique request `id`.
+            *   Format the appropriate JSON message according to the defined protocol (Phase 1.1).
+            *   Send the message over the network connection using the handle provided in the constructor.
+            *   **Crucially:** Implement logic to **wait for and receive** the corresponding response message (matching `id`) from the external agent.
+            *   Handle potential timeouts or network errors during send/receive.
+            *   Update internal `convo` with the agent's response.
+            *   Return the received data (or confirmation status) to the calling `Component`.
+*   **[X] 1.4. Implement Basic `Slot` Functionality:**
+    *   [X] Create a `Slot` class/interface.
+    *   [X] Add a basic WebSocket server setup within the `Slot` (using `Deno.serve` and `Deno.upgradeWebSocket`).
+    *   [X] Implement `listen()` or `run()`:
         *   Start the WebSocket server.
         *   On connection:
-            *   Instantiate `StandardController` with the new WebSocket connection.
-            *   Initialize the `StandardController`'s `Convo` (e.g., `new Convo("Slot system prompt")`).
-            *   Instantiate a simple root `Component` (e.g., `HelloWorldComponent`).
-            *   Call `component.interact(controller)`.
-            *   Handle connection closure/errors.
-*   **[ ] 1.5. Create Minimal `HelloWorldComponent`:**
-    *   [ ] Implement `Component` interface.
-    *   [ ] `interact(controller)` method:
-        *   Calls `await controller.put("Hello from Component!")`.
-        *   Calls `const name = await controller.get("What is your name?")`.
-        *   Calls `await controller.put(`Nice to meet you, ${name}!`)`.
-*   **[ ] 1.6. Create Mock External Agent (Test Client):**
-    *   [ ] Create a simple Deno script (`test-agent.ts`) that:
+            *   Instantiate the appropriate `Controller` implementation (currently hardcoded to `StandardController`) with the new WebSocket connection. This controller instance acts as the policy engine for this specific agent connection.
+            *   Initialize the `Controller`'s `Convo` (e.g., `new Convo("Slot system prompt")`).
+            *   Instantiate the root `Component` for this slot.
+            *   Call `component.interact(controller)`, passing the specific controller instance to the component.
+            *   Handle connection closure/errors (primarily within `StandardController`).
+*   **[X] 1.5. Create Minimal `HelloWorldComponent`:**
+    *   [X] Implement `Component` interface.
+    *   [X] `interact(controller)` method:
+        *   Calls `await controller.put(...)`.
+        *   Calls `await controller.get(...)`.
+        *   Calls `await controller.pick(...)`.
+        *   Calls `await controller.confirm(...)`.
+        *   Calls `await controller.put(...)`.
+*   **[X] 1.6. Create Mock External Agent (Test Client):**
+    *   [X] Create a simple Deno script (`test-agent.ts`) that:
         *   Connects to the `Slot`'s WebSocket endpoint.
         *   Listens for messages.
-        *   Handles `info` messages (logs them).
-        *   Handles `prompt` messages (e.g., automatically responds with `{ type: 'response', id: receivedId, payload: { content: 'TestAgent' } }`).
+        *   Handles `info` messages (logs them, sends `ack`).
+        *   Handles `prompt` messages (responds with canned data).
+        *   Handles `choice` messages (picks first option).
+        *   Handles `confirm` messages (responds `true`).
         *   Acknowledges `info` with `ack`.
-*   **[ ] 1.7. Basic Integration Test:**
-    *   [ ] Run the `Slot`.
-    *   [ ] Run the `test-agent.ts`.
-    *   [ ] Verify the interaction completes successfully.
+*   **[X] 1.7. Basic Integration Test:** (Manual verification possible)
+    *   [X] Run the `Slot` (via `deno task start-slot`).
+    *   [X] Run the `test-agent.ts` (via `deno task start-agent`).
+    *   [X] Verify the interaction completes successfully by observing logs from both processes.
 
 ---
 
@@ -77,24 +81,24 @@
 
 *   **[ ] 2.1. Implement Full Network Logic in `StandardController`:**
     *   [ ] Ensure `pick`, `confirm`, `put` fully implement sending the request and waiting for the specific response type (`response` with content/boolean, `ack`).
-*   **[ ] 2.2. Implement `DebugController`:**
+*   **[ ] 2.2. Implement `DebugController` Policy:**
     *   [ ] Create `DebugController extends StandardController` (or directly from abstract `WorkerController`).
-    *   [ ] Override methods (`get`, `pick`, `confirm`, `put`).
-    *   [ ] Before sending to agent: Log the outgoing request details.
-    *   [ ] After receiving from agent: Log the incoming response details.
-    *   [ ] Call `super.method(...)` or reimplement network logic.
-*   **[ ] 2.3. Implement `AutoConfirmController`:**
+    *   [ ] Override relevant methods (`get`, `pick`, `confirm`, `put`).
+    *   [ ] Before sending the request over the network: Log the outgoing request details.
+    *   [ ] After receiving the response from the network: Log the incoming response details.
+    *   [ ] Delegate the actual network communication to the parent class (`super.method(...)`) or reimplement if extending the abstract base.
+*   **[ ] 2.3. Implement `AutoConfirmController` Policy:**
     *   [ ] Create `AutoConfirmController extends StandardController` (or abstract).
     *   [ ] Override `confirm(query: string): Promise<boolean>`:
-        *   Update internal `convo` (user query, model auto-response 'true').
+        *   Update internal `convo` (component query, controller auto-response 'true').
         *   Optionally log the auto-confirmation.
-        *   **Do not** send message to agent.
-        *   Return `true` immediately.
-    *   [ ] Other methods (`get`, `pick`, `put`) likely delegate to `StandardController` logic or abstract implementation.
-*   **[ ] 2.4. Enhance `Slot` Configuration & Controller Selection:**
-    *   [ ] Allow `Slot` definition to specify permissible `WorkerController` types.
-    *   [ ] Implement a mechanism for the connecting agent OR the slot configuration to choose the controller (e.g., query parameter `?controller=debug`, header, or slot default).
-    *   [ ] Instantiate the *selected* controller type on connection.
+        *   **Do not** send a 'confirm' message over the network to the agent.
+        *   Return `true` immediately to the component.
+    *   [ ] Other methods (`get`, `pick`, `put`) should delegate to the standard network implementation (e.g., `super.get(...)`).
+*   **[ ] 2.4. Enhance `Slot` for Controller Policy Selection:**
+    *   [ ] Allow `Slot` definition/configuration to specify permissible `WorkerController` policy implementations.
+    *   [ ] Implement a mechanism for the connecting agent OR the slot configuration to choose the desired controller policy (e.g., via WebSocket subprotocol, initial message payload, query parameter `?policy=debug`, or a slot default).
+    *   [ ] Ensure the `Slot` instantiates the *selected* controller policy implementation upon successful agent connection.
 *   **[ ] 2.5. Create More Complex Example `Component` (`SurveyComponent`):**
     *   [ ] `interact(controller)`:
         *   Uses `controller.get()` for open questions.
@@ -172,8 +176,8 @@
 
 ## Ongoing Tasks / Cleanup
 
-*   **[ ] 5.1. Code Cleanup & Refactoring:**
-    *   [ ] **Remove Obsolete Code:** Delete the internal `Worker` class (unless repurposed for testing) and related logic (`GeminiModel`, `MocModel` might move to `examples/` or `tests/`).
+*   **[~] 5.1. Code Cleanup & Refactoring:**
+    *   [X] **Remove Obsolete Code:** Delete the internal `Worker` class (unless repurposed for testing) and related logic (`GeminiModel`, `MocModel` might move to `examples/` or `tests/`). (Worker removed, MocModel/Controller fixed in test-mocks.ts).
     *   [ ] Ensure consistent naming conventions.
     *   [ ] Add internal code comments where necessary.
 *   **[ ] 5.2. Testing Improvements:**

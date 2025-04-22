@@ -19,9 +19,14 @@
   ],
   "tasks": {
     "test-watch": "deno test --watch -A test-watch.ts",
-    "test-full": "deno test -A test-full.ts test-full.ts" // Added test-full.ts here as it was missing
+    "test-full": "deno test -A test-full.ts",
+    "start-slot": "deno run --allow-net --allow-read --allow-env examples/run-hello-slot.ts",
+    "start-agent": "deno run --allow-net test-agent.ts ws://localhost:8080",
+    "test-integration": "echo 'Manual: Run start-slot in one terminal, start-agent in another'"
+    // TODO: Automate integration test later if possible
   },
   "imports": {
-    "@/": "./"
+    "@/": "./",
+    "npm:uuid": "npm:uuid@^9.0.1" // Add uuid for request IDs
   }
 }
